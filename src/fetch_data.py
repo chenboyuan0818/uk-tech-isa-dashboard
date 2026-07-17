@@ -19,6 +19,9 @@ def fetch_prices():
     close = close.ffill()
     # 开头几行可能因为"该股票还没上市/数据还没开始"而是 NaN，ffill 补不了，直接丢弃
     close = close.dropna()
+    # 验货：yfinance 断网时不报错，而是安静返回空表——必须自己检查，主动把它变成异常
+    if close.empty:
+        raise RuntimeError("下载结果为空：可能是断网或者Yahoo 接口故障")
     return close
 
 def save_prices(close):
@@ -28,9 +31,29 @@ def save_prices(close):
     close.to_csv(path)
     print(f"已保存 {close.shape[0]} 行 × {close.shape[1]} 列 → {path}")
 
-# 这个 if 的意思：只有"直接运行本文件"时才执行下面的代码；
-# 以后 app.py 用 import 引用本模块时，不会触发下载
+
+
+def load_prices(force_refresh = False):
+    """获取价格数据的统一入口：优先读本地缓存，必要时才联网下载。
+    force_refresh=True 时强制重新下载。
+        """
+    cache = DATA_DIR / "close_prices.csv"
+    # 情况一：有缓存且不要求刷新 → 直接读本地文件，零网络请求
+    if cache.exists() and not force_refresh:
+        print("使用本地缓存")
+        return pd.read_csv(cache, index_col = "Date", parse_dates = True)
+        # 情况二：需要下载 → 用 try/except 兜住可能的网络失败
+    try:
+        prices = fetch_prices()
+    except Exception as error:
+        print(f"下载失败：{error}")
+        if cache.exists():
+                print("退而求其次，使用本地缓存")
+                return pd.read_csv(cache, index_col = "Date", parse_dates = True)
+        raise #连缓存都没有，只能把错误原样抛出，让程序停下
+    save_prices(prices)
+    return prices
+
 if __name__ == "__main__":
-   prices = fetch_prices()
-   save_prices(prices)
-   print(prices.tail())
+    prices = load_prices(force_refresh=True)  # 直接运行本文件 = 主动刷新数据
+    print(prices.tail())
