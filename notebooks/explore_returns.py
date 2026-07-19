@@ -35,3 +35,12 @@ volatility = returns.std() * np.sqrt(252)
 
 print("年化波动率排行（%）：")
 print((volatility * 100).round(1).sort_values(ascending=False))
+
+print("=" * 50)
+nav = (1 + returns).cumprod() # 净值曲线（之前算过，这里重算一遍保持独立）
+peak = nav.cummax()           # 每天回望：历史最高纪录是多少
+drawdown = nav / peak - 1     # 每天：距离巅峰跌了多少（0 = 正创新高）
+max_dd = drawdown.min()       # 最深的那个坑
+
+print("最大回撤排行（%，越接近0越好）：")
+print((max_dd * 100).round(1).sort_values(ascending = False))

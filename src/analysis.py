@@ -26,7 +26,14 @@ def moving_average(prices, window):
     """N 日移动平均线。开头不足 window 天的部分为 NaN。"""
     return prices.rolling(window).mean()
 
+def drawdown_series(returns):
+    """ 每日回撤序列：当日净值相对历史峰值的跌幅（0 = 正创新高）。"""
+    nav = (1 + returns).cumprod()
+    return nav / nav.cummax() - 1
 
+def max_drawdown(returns):
+    """最大回撤：历史上从峰值到谷底的最大跌幅（负数）"""
+    return drawdown_series(returns).min()
 if __name__ == "__main__":
      # 冒烟测试：直接运行本文件时，快速自检各函数是否正常
      import sys
@@ -40,6 +47,8 @@ if __name__ == "__main__":
      nav = cumulative_returns(returns)
      print("两年累计收益率排行（%）：")
      print(((nav.iloc[-1] - 1) * 100).round(1).sort_values(ascending = False))
+
+
 
 
 
