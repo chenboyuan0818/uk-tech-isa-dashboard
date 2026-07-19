@@ -26,3 +26,12 @@ cumulative = (1 + returns).cumprod()
 print("每只股票的两年累计收益率 %：")
 final = (cumulative.iloc[-1] - 1) * 100   # iloc[-1] = 按位置取最后一行
 print(final.round(1).sort_values(ascending = False))
+
+print("=" * 50)
+import numpy as np
+
+# std() = 标准差（standard deviation），× √252 换算成年尺度
+volatility = returns.std() * np.sqrt(252)
+
+print("年化波动率排行（%）：")
+print((volatility * 100).round(1).sort_values(ascending=False))
