@@ -34,20 +34,31 @@ def drawdown_series(returns):
 def max_drawdown(returns):
     """最大回撤：历史上从峰值到谷底的最大跌幅（负数）"""
     return drawdown_series(returns).min()
+
+def portfolio_returns(returns, weights):
+    """按权重合成组合的日收益率序列。
+
+    weights 顺序须与 returns 的列一一对应，总和应为 1。
+    """
+    return returns.dot(weights)
+
+
 if __name__ == "__main__":
-     # 冒烟测试：直接运行本文件时，快速自检各函数是否正常
-     import sys
-     from pathlib import Path
+    import sys
+    from pathlib import Path
 
-     sys.path.append(str(Path(__file__).parent.parent))
-     from src.fetch_data import load_prices
+    sys.path.append(str(Path(__file__).parent.parent))
+    from src.fetch_data import load_prices
 
-     prices = load_prices()
-     returns = daily_returns(prices)
-     nav = cumulative_returns(returns)
-     print("两年累计收益率排行（%）：")
-     print(((nav.iloc[-1] - 1) * 100).round(1).sort_values(ascending = False))
+    prices = load_prices()
+    returns = daily_returns(prices)
+    weights = np.ones(len(returns.columns)) / len(returns.columns)
+    port = portfolio_returns(returns, weights)
 
+    print("等权组合三大指标：")
+    print(f"累计收益: {(cumulative_returns(port).iloc[-1] - 1) * 100:.1f}%")
+    print(f"年化波动率: {annualized_volatility(port) * 100:.1f}%")
+    print(f"最大回撤: {max_drawdown(port) * 100:.1f}%")
 
 
 

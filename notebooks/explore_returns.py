@@ -44,3 +44,42 @@ max_dd = drawdown.min()       # 最深的那个坑
 
 print("最大回撤排行（%，越接近0越好）：")
 print((max_dd * 100).round(1).sort_values(ascending = False))
+
+print("=" * 50)
+# corr() 计算所有列两两之间的相关系数，输出 7×7 矩阵
+print("相关性矩阵")
+print(returns.corr().round(2))
+
+print("=" * 50)
+corr = returns.corr()
+# 第 1 步：做一个"上三角"面具——只保留矩阵对角线以上的部分
+# np.ones(...) 生成全 True 的 7×7；np.triu(..., k=1) 只留上三角（k=1 表示不含对角线）
+mask = np.triu(np.ones(corr.shape, dtype = bool), k = 1)
+
+# 第 2 步：where(mask) = 面具外的格子全部变 NaN；stack() = 把表格"拍扁"成一列，NaN 自动丢弃
+pairs = corr.where(mask).stack().dropna()
+
+# 第 3 步：排序，得到排行榜
+ranked = pairs.sort_values(ascending=False)
+
+print("相关性最高的5对：")
+print(ranked.head(5).round(2))
+print("相关性最低的5对：")
+print(ranked.tail(5).round(2))
+
+print("=" * 50)
+# 等权组合：7 只股票各占 1/7（先用最简单的权重方案验证逻辑）
+weights = np.ones(len(returns.columns)) / len(returns.columns)
+
+# dot = 点积：每行做"权重 × 收益率"再求和，一次算完整个序列
+port_returns = returns.dot(weights)
+
+port_nav = (1 + port_returns).cumprod()
+port_vol = port_returns.std() * np.sqrt(252)
+port_dd = (port_nav / port_nav.cummax() - 1).min()
+
+print(f"等权组合 累计收益：{(port_nav.iloc[-1] - 1) * 100:.1f}%")
+print(f"等权组合  年化波动率: {port_vol * 100:.1f}%")
+print(f"等权组合  最大回撤: {port_dd * 100:.1f}%")
+print(f"（对比）7 只股票波动率的简单平均: {(returns.std() * np.sqrt(252)).mean() * 100:.1f}%")
+
