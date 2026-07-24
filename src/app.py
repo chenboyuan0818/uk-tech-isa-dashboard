@@ -4,6 +4,9 @@ from fetch_data import load_prices
 import numpy as np
 import analysis
 
+import pandas as pd
+
+import plotly.express as px
 
 st.title("🇬🇧英国科技股 ISA 组合分析仪表盘")
 st.caption("⚠️ 仅供教育与学习用途，不构成任务投资建议")
@@ -67,3 +70,38 @@ c3.metric("最大回撤", f"{mdd * 100:.1f}%")
 # 组合净值曲线
 st.subheader("组合累计净值曲线(等权)")
 st.line_chart(analysis.cumulative_returns(port))
+
+# ── 板块二:个股分析 ──
+st.markdown("---")
+st.header("② 个股分析")
+
+pick = st.selectbox("选择一只股票", prices.columns)
+
+stock = prices[pick]
+ma_df = pd.DataFrame({
+    "价格": stock,
+    "MA20": analysis.moving_average(stock, 20),
+    "MA50": analysis.moving_average(stock, 50),
+    "MA200": analysis.moving_average(stock, 200),
+})
+st.subheader(f"{pick} 价格与移动平均线")
+st.line_chart(ma_df)
+
+st.subheader(f"{pick} 日收益分布")
+fig = px.histogram(x = returns[pick] * 100, nbins = 50)
+fig.update_layout(xaxis_title="日收益率 (%)", yaxis_title="天数", showlegend=False)
+st.plotly_chart(fig, use_container_width = True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
