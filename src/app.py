@@ -93,6 +93,36 @@ fig.update_layout(xaxis_title="日收益率 (%)", yaxis_title="天数", showlege
 st.plotly_chart(fig, use_container_width = True)
 
 
+# ── 板块三:风险分析 ──
+st.markdown("---")
+st.header("③ 风险分析")
+
+st.subheader("相关性热力图")
+st.caption("红 = 同涨同跌(分散差),蓝 = 走势独立或相反(分散好)")
+
+corr = returns.corr()
+fig = px.imshow(
+    corr,
+    text_auto = "2f",
+    color_continuous_scale = "RdBu_r",
+    zmin = -1, zmax = 1,
+    aspect = "auto",
+)
+st.plotly_chart(fig, use_container_width = True)
+
+st.subheader("组合回撤曲线(水下图)")
+st.caption("0 = 创出新高;向下的深度 = 当前距历史峰值跌了多少")
+dd = analysis.drawdown_series(port)
+st.area_chart(dd)
+
+
+
+
+
+
+
+
+
 
 
 
