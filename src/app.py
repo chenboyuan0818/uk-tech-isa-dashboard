@@ -8,139 +8,120 @@ import pandas as pd
 
 import plotly.express as px
 
-st.title("🇬🇧英国科技股 ISA 组合分析仪表盘")
-st.caption("⚠️ 仅供教育与学习用途，不构成任务投资建议")
+st.title("🇬🇧🇺🇸 UK & US Tech Stock ISA Portfolio Dashboard")
+st.caption("⚠️ For educational purposes only — not investment advice")
 
-# ── @st.cache_data:给慢操作装上"记忆" ──
+
+# ── @st.cache_data: give the slow data load a "memory" ──
 @st.cache_data
 def get_prices():
     return load_prices()
 
+
 with st.sidebar:
-    st.header("⚙️ 设置")
-    if st.button("🔄 刷新为最新数据"):
-        load_prices(force_refresh = True)     # 第1层:强制重新下载,覆盖 CSV
-        st.cache_data.clear()                 # 第2层:清空 Streamlit 记忆
-        st.success("数据已更新!")
+    st.header("⚙️ Settings")
+    if st.button("🔄 Refresh to latest data"):
+        load_prices(force_refresh=True)   # Layer 1: force re-download, overwrite the CSV
+        st.cache_data.clear()             # Layer 2: clear Streamlit's cached result
+        st.success("Data updated!")
 
 prices = get_prices()
 n = len(prices.columns)
+
 with st.sidebar:
-    st.subheader("🎚️ 持仓权重 (%)")
+    st.subheader("🎚️ Holding weights (%)")
     raw = {}
     for t in prices.columns:
         raw[t] = st.slider(t, 0, 100, 100 // n)
 
-# 归一化:不管用户拖成多少,都按比例缩放到"总和=1",保证是合法组合
+# Normalise: whatever the user picks, scale proportionally so the weights sum to 1
 total_w = sum(raw.values())
 if total_w == 0:
-    st.warning("请至少给一只股票分配权重")
+    st.warning("Please assign a weight to at least one stock")
     st.stop()
 weights = np.array([raw[t] / total_w for t in prices.columns])
 
 
-
-st.subheader("📈 相对表现(全部归一化到起点 = 100)")
+st.subheader("📈 Relative performance (all rebased to 100 at the start)")
 rebased = prices / prices.iloc[0] * 100
 st.line_chart(rebased)
 
-# ── 板块一:组合总览 ──
+# ── Section 1: Portfolio Overview ──
 st.markdown("---")
-st.header("① 组合总览")
-
-# 先用等权组合(每只 1/7),之后再加"手动调权重"的滑块
-n = len(prices.columns)
-
+st.header("① Portfolio Overview")
 
 returns = analysis.daily_returns(prices)
 port = analysis.portfolio_returns(returns, weights)
 
-# 复用阶段三的函数算三个指标
+# Reuse the analysis functions to compute the three headline metrics
 total_returns = analysis.cumulative_returns(port).iloc[-1] - 1
 vol = analysis.annualized_volatility(port)
 mdd = analysis.max_drawdown(port)
 
-# 三个并排的指标卡片
+# Three metric cards side by side
 c1, c2, c3 = st.columns(3)
-c1.metric("累计收益", f"{total_returns * 100:.1f}%")
-c2.metric("年化波动率", f"{vol * 100:.1f}%")
-c3.metric("最大回撤", f"{mdd * 100:.1f}%")
+c1.metric("Total Return", f"{total_returns * 100:.1f}%")
+c2.metric("Annualised Volatility", f"{vol * 100:.1f}%")
+c3.metric("Max Drawdown", f"{mdd * 100:.1f}%")
 
-# 组合净值曲线
-st.subheader("组合累计净值曲线(等权)")
+# Portfolio cumulative net-asset-value curve
+st.subheader("Portfolio cumulative NAV")
 st.line_chart(analysis.cumulative_returns(port))
 
-# ── 板块二:个股分析 ──
+# ── Section 2: Single-Stock Analysis ──
 st.markdown("---")
-st.header("② 个股分析")
+st.header("② Single-Stock Analysis")
 
-pick = st.selectbox("选择一只股票", prices.columns)
+pick = st.selectbox("Choose a stock", prices.columns)
 
 stock = prices[pick]
 ma_df = pd.DataFrame({
-    "价格": stock,
+    "Price": stock,
     "MA20": analysis.moving_average(stock, 20),
     "MA50": analysis.moving_average(stock, 50),
     "MA200": analysis.moving_average(stock, 200),
 })
-st.subheader(f"{pick} 价格与移动平均线")
+st.subheader(f"{pick} — price and moving averages")
 st.line_chart(ma_df)
 
-st.subheader(f"{pick} 日收益分布")
-fig = px.histogram(x = returns[pick] * 100, nbins = 50)
-fig.update_layout(xaxis_title="日收益率 (%)", yaxis_title="天数", showlegend=False)
-st.plotly_chart(fig, use_container_width = True)
+st.subheader(f"{pick} — daily return distribution")
+fig = px.histogram(x=returns[pick] * 100, nbins=50)
+fig.update_layout(xaxis_title="Daily return (%)", yaxis_title="Number of days", showlegend=False)
+st.plotly_chart(fig, use_container_width=True)
 
 
-# ── 板块三:风险分析 ──
+# ── Section 3: Risk Analysis ──
 st.markdown("---")
-st.header("③ 风险分析")
+st.header("③ Risk Analysis")
 
-st.subheader("相关性热力图")
-st.caption("红 = 同涨同跌(分散差),蓝 = 走势独立或相反(分散好)")
+st.subheader("Correlation heatmap")
+st.caption("Red = move together (weak diversification), Blue = independent or opposite (strong diversification)")
 
 corr = returns.corr()
 fig = px.imshow(
     corr,
-    text_auto = "2f",
-    color_continuous_scale = "RdBu_r",
-    zmin = -1, zmax = 1,
-    aspect = "auto",
+    text_auto=".2f",
+    color_continuous_scale="RdBu_r",
+    zmin=-1, zmax=1,
+    aspect="auto",
 )
-st.plotly_chart(fig, use_container_width = True)
+st.plotly_chart(fig, use_container_width=True)
 
-st.subheader("组合回撤曲线(水下图)")
-st.caption("0 = 创出新高;向下的深度 = 当前距历史峰值跌了多少")
+st.subheader("Portfolio drawdown (underwater plot)")
+st.caption("0 = new high; the depth below shows how far the portfolio is from its historical peak")
 dd = analysis.drawdown_series(port)
 st.area_chart(dd)
 
-# ── 板块四:原始数据 ──
+# ── Section 4: Raw Data ──
 st.markdown("---")
-st.header("④ 原始数据")
-st.caption("所有分析基于以下收盘价数据,可下载后自行核对")
+st.header("④ Raw Data")
+st.caption("All analysis is based on the closing prices below — download to verify for yourself")
 
-st.dataframe(prices, use_container_width = True)
+st.dataframe(prices, use_container_width=True)
 csv = prices.to_csv().encode("utf-8")
 st.download_button(
-label="⬇️ 下载 CSV",
+    label="⬇️ Download CSV",
     data=csv,
     file_name="close_prices.csv",
     mime="text/csv",
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
