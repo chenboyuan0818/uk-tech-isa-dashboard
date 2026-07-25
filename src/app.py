@@ -38,8 +38,7 @@ if total_w == 0:
     st.stop()
 weights = np.array([raw[t] / total_w for t in prices.columns])
 
-st.subheader("📝原始价格数据")
-st.dataframe(prices)
+
 
 st.subheader("📈 相对表现(全部归一化到起点 = 100)")
 rebased = prices / prices.iloc[0] * 100
@@ -115,9 +114,19 @@ st.caption("0 = 创出新高;向下的深度 = 当前距历史峰值跌了多少
 dd = analysis.drawdown_series(port)
 st.area_chart(dd)
 
+# ── 板块四:原始数据 ──
+st.markdown("---")
+st.header("④ 原始数据")
+st.caption("所有分析基于以下收盘价数据,可下载后自行核对")
 
-
-
+st.dataframe(prices, use_container_width = True)
+csv = prices.to_csv().encode("utf-8")
+st.download_button(
+label="⬇️ 下载 CSV",
+    data=csv,
+    file_name="close_prices.csv",
+    mime="text/csv",
+)
 
 
 
